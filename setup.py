@@ -4,7 +4,7 @@ setup(
     name="devops-lab2-app",
     version="0.1.0",
     author="mirojek",
-    description="Aplikacja DevOps.",
+    description="Aplikacja DevOps",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=[],
@@ -13,7 +13,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "myapp=src.myapp.app:welcome"
-        ]
+            "myapp=src.myapp.app:welcome",
+        ],
     },
 )
