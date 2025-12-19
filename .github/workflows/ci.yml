@@ -1,5 +1,4 @@
 name: CI
-
 on:
   push:
     branches: [ main ]
@@ -9,6 +8,10 @@ on:
     branches: [ main ]
     paths-ignore:
       - 'docs/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -28,17 +31,19 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
         restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}-
           ${{ runner.os }}-pip-
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .[tests]
-    
+        pip install pytest ".[tests]"
+
     - name: Run tests
-      run: pytest tests/
+      run: |
+        pytest tests/ -v --tb=short
     
     - name: Build application
       run: python setup.py sdist bdist_wheel
@@ -48,11 +53,15 @@ jobs:
       with:
         name: dist-${{ matrix.python-version }}
         path: dist/
+        retention-days: 1
     
     - name: Notify on failure
       if: failure()
-      uses: 8398a7/action-slack@v3
-      with:
-        status: failure
       env:
-        SLACK_WEBHOOK_URL: ${{ secrets.WEBHOOKURL }}
+        WEBHOOKURL: ${{ secrets.WEBHOOKURL }}
+      run: |
+        curl -H "Content-Type: application/json" \
+             -d '{
+               "content": "🚨 Build failed: ${{ github.repository }} #${{ github.run_number }} (${{ matrix.python-version }}) - ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+             }' \
+             $WEBHOOKURL || true
